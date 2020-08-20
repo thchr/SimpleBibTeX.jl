@@ -4,9 +4,10 @@
 [![Coverage](https://codecov.io/gh/thchr/SimpleBibTeX.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/thchr/SimpleBibTeX.jl)
 
 SimpleBibTeX.jl provides a simple parser of .bib files and .bib-formatted strings.
+
 Two types, `Citation` and `Bibliography` (an `AbstractDict` wrapper over `Citations` and keys), and a single method `parsebibtex(...)` are exported (see help).
 
-# Examples
+## Examples
 
 ```julia
 bib = """
