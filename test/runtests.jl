@@ -57,4 +57,19 @@ using Test
     println(Set(keys(C)))
     ks = ["volume","author","year","journal","pages","doi","title","timestamp"]
     @test Set(keys(C)) == Set(ks)
+
+
+    # Corner-case: an unmatched/unbalanced \{ in a field entry
+    bibstr = """
+        @article{test:1,
+            author = {Cuppa, J.},
+            title  = {A tale of an unmatched \$\\}\$ parenthesis},
+            journal = {},
+        }
+        """
+
+    B, _ = parsebibtex(bibstr, isfilename=false)
+    C = B["test:1"]
+    @test C["title"] == "A tale of an unmatched \$\\}\$ parenthesis"
+    @test C["journal"] == ""
 end

@@ -111,18 +111,22 @@ end of the matching braces.
 """
 function readfield(io::IO, ispreamble::Bool=false)
     ispreamble || readuntil(io, '{') # move "read-cursor" up to start of contents
-    bracesum = 1 # brace counter: `{` adds 1, `}` subtracts one; contents "done" when `bracesum = 0`
-    fieldentry = ""
-    # start reading contents (a loop, because we need to allow for braces within contents)
+    bracesum = 1 # brace counter: `{` adds 1, `}` subtracts 1; "done" when `bracesum = 0`
+    fieldentry_io = IOBuffer()
+    # start reading contents (loop, because we need to allow for braces within contents)
     while !eof(io) 
         step = readuntil(io, ['{', '}'], keep=true)
-        bracesum += last(step) == '}' ? -1 : 1
-        fieldentry *= step # "add" what we have read so far into field contents
-        if iszero(bracesum) # contents are terminated, cf. brace count; go to next field
-            break 
+        if length(step) == 1 || step[end-1] ≠ '\\'
+            bracesum += last(step) == '}' ? -1 : 1
+        end
+
+        if iszero(bracesum) # contents are terminated, cf. brace count; return field string
+            write(fieldentry_io, SubString(step, 1, ncodeunits(step)-ncodeunits('}')))
+            return String(take!(fieldentry_io))
+        else
+            write(fieldentry_io, step) # "add" what we have read so far into field contents
         end
     end
-    return fieldentry[1:end-ncodeunits("}")] # remove the closing `}`, which is not part of field contents
 end
 
 
@@ -158,19 +162,19 @@ function parsebibtex(io::IO)
                         fieldkey = fieldkey[1:end-sizeof("=")] # a field was found; remove `=` from key string
                     end
 
-                    # remove comma from last line & do some simple clean-up, in 
-                    # case user entered quasi-garbled format. `fieldkey` is e.g.,
-                    # 'author', 'title', etc.
-                    for swap in ["\n", "\r", " ", "\t", ","]   
+                    # remove comma from last line & do some simple clean-up, in case user
+                    # entered quasi-garbled format. `fieldkey` is e.g., author, title, etc.
+                    for swap in ('\n', '\r', ' ', '\t', ',') 
                         fieldkey = replace(fieldkey, swap=>"")
                     end
                     
                     # read the field contents (delimited by {...} braces)
                     fieldentry = readfield(io) 
-                    for swap in ["\n"=>" ", "\r"=>" ", "\t"=>" ", r"[ ]{2,}"=>" "] 
-                        fieldentry = replace(fieldentry, swap) # clean up if user gave quasi-garbled format for field contents
+                    for swap in ('\n'=>' ', '\r'=>' ', '\t'=>' ', r"[ ]{2,}"=>' ') 
+                        # clean up if user gave quasi-garbled format for field contents
+                        fieldentry = replace(fieldentry, swap)
                     end
-                    C.data[fieldkey] = fieldentry # add the field in the Citation's dict entry
+                    C.data[fieldkey] = fieldentry # add field to the Citation's dict entry
                 end
                 B.citations[key] = C # add the Citation to the Bibliography
             end     
