@@ -32,7 +32,7 @@ using Test
     @test B["Abajo:1997"]["volume"] == "56"
     @test B["Rudin:1997"]["pages"] == "4684"
     @test sort(collect(keys(B))) == ["Abajo:1997", "Rudin:1997"]
-    @test preamble === nothing
+    @test preamble === ""
 
     # test show methods
     display_string(x) = (io=IOBuffer(); show(io, MIME"text/plain"(), x); String(take!(io)))

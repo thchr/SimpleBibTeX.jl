@@ -101,7 +101,7 @@ function _readuntil(s::IO, delims::Union{Vector{T}, Tuple{T, Vararg{T}}}) where 
         end
         write(out, c)
     end
-    return String(take!(out)), nothing
+    return nothing
 end
 
 
@@ -122,8 +122,9 @@ function readfield(io::IO, ispreamble::Bool=false)
     fieldentry_io = IOBuffer()
     # start reading contents (loop, because we need to allow for braces within contents)
     while !eof(io) 
-        step, match_delim = _readuntil(io, ('{', '}'))
-        match_delim === nothing && throw(DomainError(step, "Malformed field string"))
+        r = _readuntil(io, ('{', '}'))
+        r !== nothing ? (step=first(r); match_delim=last(r)) : throw("Malformed field content")
+
         if length(step) == 0 || last(step) ≠ '\\'
             bracesum += match_delim == '}' ? -1 : 1
         end
@@ -135,6 +136,8 @@ function readfield(io::IO, ispreamble::Bool=false)
             write(fieldentry_io, step, match_delim) # "add" what we have read so far into field contents
         end
     end
+
+    throw("Malformed field; unbalanced parenthesis")
 end
 
 
@@ -143,17 +146,17 @@ end
 
 Builds a `Bibliography`, containing `Citation` fields, corresponding 
 to the BibTeX entries in the `io::IO` object (e.g. `IOStream` or `IOBuffer`).
-Also outputs a preamble as a `String` if present (`nothing` otherwise)
+Also outputs a preamble as a `String` (`""` if empty or absent).
 """
 function parsebibtex(io::IO)
     B = Bibliography()
-    preamble = nothing
+    preamble = ""
     while !eof(io)
         if last(readuntil(io, '@', keep = true)) == '@' # @ marks new citation
             kind = readuntil(io, '{') # type of citation (e.g., Article, Book, etc.)  
             if lowercase(kind) == "preamble" # BibTeX entry of the `preamble` kind
                 preamble = readfield(io, true)
-            
+
             else  
                 # assume this is an "ordinary" BibTeX entry (e.g., kind is not `preamble`,
                 # `comment`, or `string`)
@@ -163,14 +166,12 @@ function parsebibtex(io::IO)
                 while !eof(io) 
                     # some citations may have no fields; check for `}` in that case; 
                     # if it has any fields, their key terminates with `=`
-                    fieldkey, match_delim = _readuntil(io, ('=', '}'))
-                    fieldkey = lowercase(fieldkey) 
-                    if match_delim === nothing
-                        throw("Unbalanced fieldkey")
-                    elseif match_delim == '}' # no fields in citation; go to next one
-                        break
-                    #else: a field was found; remove '=' from key string
-                    end
+                    r = _readuntil(io, ('=', '}'))
+                    r !== nothing ? (fieldkey=first(r); match_delim=last(r)) : throw("Malformed or unbalanced field key")
+                    fieldkey = lowercase(fieldkey)
+                    
+                    match_delim == '}' && break # no fields in citation; go to next one
+                    #otherwise: a field was found; match_delim is '='
 
                     # remove comma from last line & do some simple clean-up, in case user
                     # entered quasi-garbled format. `fieldkey` is e.g., author, title, etc.
@@ -196,7 +197,7 @@ Constructs a `Bibliography` struct, containing `Citation` fields, corresponding
 to the BibTeX entries in the `filename_or_string` string. 
 If `isfilename=true` (default), the input string is interpreted as the 
 location of a file. If `false`, the string is interpreted and parsed as BibTeX.
-Also outputs a preamble as a `String` if present (`nothing` otherwise)
+Also outputs a preamble as a `String` (`""` if empty or absent).
 """
 function parsebibtex(filename_or_string::String; isfilename::Bool=true)
     # treat string-input as the name of a file, relative to caller
