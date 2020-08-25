@@ -9,35 +9,39 @@ module SimpleBibTeX
 export Citation, Bibliography, parsebibtex
 
 import Base: readuntil # icky extend
-import Base: show, getindex, keys, values, haskey, get, length, iterate,    # overloads
+import Base: show, getindex, haskey, get, length, iterate,    # overloads
              summary, ==
 
 const MIN_SEPLEN = 10 # lead length for showing of `Citation`s
 
 # ---- Types ----
-struct Citation 
+struct Citation <: AbstractDict{String, String}
     kind::String
     key::String
     data::Dict{String, String}
 end
 Citation(kind, key) = Citation(titlecase(kind), key, Dict{String, String}()) # for 'kind', uppercase first letter, lowercase rest
-getindex(C::Citation, key) = C.data[key]
-keys(C::Citation) = keys(C.data)
-(==)(C::Citation, C′::Citation) = C.kind == C′.kind && C.key == C′.key && C.data == C′.data
+# AbstractDict interface
+getindex(C::Citation, key)       = C.data[key]
+haskey(C::Citation, key::String) = haskey(C.data, key)
+get(C::Citation, key, default)   = get(C.data, key, default)
+length(C::Citation)              = length(C.data)
+iterate(C::Citation)             = iterate(C.data)
+iterate(C::Citation, i::Int)     = iterate(C.data, i)
+# equivalence
+(==)(C::Citation, C′::Citation)  = C.kind == C′.kind && C.key == C′.key && C.data == C′.data
 
 struct Bibliography <: AbstractDict{String,Citation}
     citations::Dict{String, Citation}
 end
 Bibliography() = Bibliography(Dict{String, Citation}())
 # AbstractDict interface
-keys(B::Bibliography) = keys(B.citations)
-values(B::Bibliography) = values(B.citations)
-getindex(B::Bibliography, key) = B.citations[key]
+getindex(B::Bibliography, key)       = B.citations[key]
 haskey(B::Bibliography, key::String) = haskey(B.citations, key)
-get(B::Bibliography, key, default) = get(B.citations, key, default)
-length(B::Bibliography) = length(B.citations)
-iterate(B::Bibliography) = iterate(B.citations)
-iterate(B::Bibliography, i::Int) = iterate(B.citations, i)
+get(B::Bibliography, key, default)   = get(B.citations, key, default)
+length(B::Bibliography)              = length(B.citations)
+iterate(B::Bibliography)             = iterate(B.citations)
+iterate(B::Bibliography, i::Int)     = iterate(B.citations, i)
 
 # ---- Show methods ----
 delim(i, L) = i == 1 ? "┌" : i == L ? "└" : "│" # make connections pretty...

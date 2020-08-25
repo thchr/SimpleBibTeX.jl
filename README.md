@@ -5,7 +5,7 @@
 
 SimpleBibTeX.jl provides a simple parser of .bib files and .bib-formatted strings.
 
-Two types, `Citation` and `Bibliography` (an `AbstractDict` wrapper over `Citations` and keys), and a single method `parsebibtex(...)` are exported (see help).
+Two types, `Citation` and `Bibliography` (both `AbstractDict`s), and a single method `parsebibtex(...)` are exported (type `julia> ?parsebibtex` at the REPL for additional information).
 
 ## Examples
 
