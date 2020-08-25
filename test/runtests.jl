@@ -59,10 +59,10 @@ using Test
     @test Set(keys(C)) == Set(ks)
 
 
-    # Corner-case: an unmatched/unbalanced \{ in a field entry
+    # Corner-case: an balanced brackets + unmatched/unbalanced \{ + empty in a field entry
     bibstr = """
         @article{test:1,
-            author = {Cuppa, J.},
+            author = {Cuppa, {J.O}},
             title  = {A tale of an unmatched \$\\}\$ parenthesis},
             journal = {},
         }
@@ -70,6 +70,7 @@ using Test
 
     B, _ = parsebibtex(bibstr, isfilename=false)
     C = B["test:1"]
-    @test C["title"] == "A tale of an unmatched \$\\}\$ parenthesis"
-    @test C["journal"] == ""
+    @test C["author"] == "Cuppa, {J.O}" # benign, matched brackets
+    @test C["title"] == "A tale of an unmatched \$\\}\$ parenthesis" # unmatched bracket
+    @test C["journal"] == "" # empty field
 end
